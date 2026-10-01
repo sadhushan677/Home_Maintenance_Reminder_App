@@ -303,14 +303,22 @@ test('shared auth validates persisted profiles, selected roles and reuses logout
  exists = true; data = { role: 'invalid' }; await assert.rejects(() => service.getUserProfile(firebaseUser), /Invalid user role/);
  await service.logoutUser(); assert.equal(signedOut, 2);
 });
-test('root linking retains provider URLs only for provider sessions', () => {
- const linking = load('navigation/rootLinking.ts', { 'react-native': { Platform: { OS: 'web' } } });
- const signedOut = linking.rootLinking().config.screens;
+test('root linking protects provider routes and preserves provider-specific URLs', () => {
+ const { rootLinking } = load('navigation/rootLinking.ts', { 'react-native': { Platform: { OS: 'web' } } });
+ const signedOut = rootLinking().config.screens;
  assert.equal(signedOut.ProviderFlow, undefined); assert.equal(signedOut.Login, 'login/:role');
- const provider = linking.rootLinking('provider').config.screens.ProviderFlow.screens;
- assert.equal(provider.ProviderHome.screens.Dashboard, 'provider-dashboard');
- assert.equal(provider.CreateWarrantyRequest, 'create-warranty-request');
- assert.equal(provider.StatusUpdate, 'warranty-request/:warrantyRequestId/status');
- assert.equal(provider.WarrantyProviderEntry, undefined);
- assert.equal(linking.rootLinking('homeowner').config.screens.ProviderFlow, undefined);
+ assert.equal(signedOut.RoleSelection.path, ''); assert.equal(signedOut.RoleSelection.alias.includes('provider-entry'), true);
+ const homeowner = rootLinking('homeowner').config.screens;
+ assert.equal(homeowner.ProviderFlow, undefined);
+ const screens = rootLinking('provider').config.screens.ProviderFlow.screens;
+ assert.equal(screens.ProviderHome.screens.Dashboard, 'provider-dashboard');
+ assert.equal(screens.ProviderHome.screens.Requests, 'warranty-requests');
+ assert.equal(screens.ProviderHome.screens.Notifications, 'provider-notifications');
+ assert.equal(screens.ProviderHome.screens.Profile, 'provider-profile');
+ assert.equal(screens.CreateWarrantyRequest, 'create-warranty-request');
+ assert.equal(screens.CustomerApplianceInfo, 'warranty-request/:warrantyRequestId/customer-appliance');
+ assert.equal(screens.DocumentReview, 'warranty-request/:warrantyRequestId/documents');
+ assert.equal(screens.WarrantyVerification, 'warranty-request/:warrantyRequestId/verification');
+ assert.equal(screens.StatusUpdate, 'warranty-request/:warrantyRequestId/status');
+ assert.equal(screens.WarrantyProviderEntry, undefined);
 });

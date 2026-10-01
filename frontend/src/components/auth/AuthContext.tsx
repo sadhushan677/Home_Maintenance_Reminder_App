@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../config/firebase';
 import { getUserProfile, loginUser, logoutUser, type LoggedInUser, type UserRole } from '../../services/authService';
-
 type Session = { user: LoggedInUser | null; loading: boolean; error: string; login: (email: string, password: string, role: UserRole) => Promise<void>; logout: () => Promise<void> };
 const Context = createContext<Session | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {

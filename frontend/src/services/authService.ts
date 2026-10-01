@@ -45,7 +45,6 @@ export async function loginUser(
 
     const profile = await getUserProfile(firebaseUser);
     const userRole = profile.role;
-
     // Check selected role matches account role
     if (userRole !== expectedRole) {
       await signOut(auth);

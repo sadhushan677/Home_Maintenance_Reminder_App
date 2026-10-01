@@ -13,7 +13,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function ProviderFlow() {
   const { user } = useAuth();
   if (user?.role !== 'provider') return null;
-  return <ProviderModuleProvider key={user.uid} providerId={user.uid}><ProviderNavigator /></ProviderModuleProvider>;
+  // Preserve the existing shared request queue; identity is used for new records.
+  return <ProviderModuleProvider key={user.uid} authenticatedProviderId={user.uid}><ProviderNavigator /></ProviderModuleProvider>;
 }
 function TechnicianPending() {
   const { logout } = useAuth(), mutation = useProviderMutation();

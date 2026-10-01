@@ -14,7 +14,7 @@ interface Value {
   markRead: (id?: string) => Promise<void>;
 }
 const Context = createContext<Value | null>(null);
-export function ProviderModuleProvider({ children, providerId }: { children: ReactNode; providerId?: string }) {
+export function ProviderModuleProvider({ children, providerId, authenticatedProviderId }: { children: ReactNode; providerId?: string; authenticatedProviderId?: string }) {
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
   const [state, setState] = useState<ProviderState>({ requests: [], notifications: [] });
   const [requestsLoading, setRequestsLoading] = useState(true), [requestsError, setRequestsError] = useState(''), [requestsWarning, setRequestsWarning] = useState('');
@@ -49,7 +49,7 @@ export function ProviderModuleProvider({ children, providerId }: { children: Rea
     // Refresh errors have their own UI; a completed write is still a successful write.
     await refreshNotifications();
   };
-  return <Context.Provider value={{ providerId, createdRequestId, setCreatedRequestId, state, requestsLoading, requestsError, requestsWarning, notificationsLoading, notificationsError, refreshRequests, refreshNotifications, markRead }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ providerId: authenticatedProviderId ?? providerId, createdRequestId, setCreatedRequestId, state, requestsLoading, requestsError, requestsWarning, notificationsLoading, notificationsError, refreshRequests, refreshNotifications, markRead }}>{children}</Context.Provider>;
 }
 export function useProviderModule() {
   const value = useContext(Context);

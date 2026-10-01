@@ -1,52 +1,25 @@
-# Shared authentication integration
+# Shared Authentication and Provider Integration
 
-Startup uses the existing RoleSelectionScreen and LoginScreen. AuthContext supplies one Firebase auth listener, restores users/{uid}, and calls the existing loginUser/logoutUser services. Selected-role validation completes before mounting protected routes. RootNavigator exposes only the authenticated role's navigator. Invalid/missing profiles show an error rather than opening provider screens.
+## Authentication and routing
 
-Provider login opens ProviderHome -> Dashboard. Logout removes the provider navigator and its cached request data and returns to shared role selection/login. Root navigation handles the auth transition automatically, without a second NavigationContainer or manual login reset.
+The app uses the shared RoleSelectionScreen and LoginScreen with a single AuthContext listener and the existing Firebase login/logout service. Restored sessions load and validate `users/{uid}.role` before protected routes mount. A provider account opens ProviderDashboard through ProviderHome; logout returns to shared authentication. There is one top-level NavigationContainer.
 
-Create Warranty Request moved from WarrantyProviderEntryScreen to Dashboard Quick Actions. The legacy entry source and parameter type are retained, but the screen is not registered. Its former /provider-entry URL is an alias for shared role selection when signed out. Provider URLs otherwise retain their existing paths. Authenticated direct URLs work for that role; a signed-out protected URL goes to shared authentication, then Dashboard after login (no deferred deep-link replay).
+Provider web routes remain nested under the authenticated ProviderFlow. The old `/provider-entry` path resolves to shared role selection when signed out. WarrantyProviderEntryScreen remains in source for compatibility but is not registered in the normal authentication flow.
 
-ProviderModuleProvider receives the authenticated UID. Existing services filter requests/notifications by that UID, and new appliance-linked warranties and warranty requests use it as providerId. Notification status updates retain the request's providerId. Legacy null/other-provider records are not migrated or shown in this provider's filtered list. Profile displays Firebase displayName/email with shared profile fallbacks and uses the shared logout service.
+## Provider behavior and data
 
-## Changed files
-- App.tsx
-- src/navigation/RootNavigator.tsx
-- src/navigation/ProviderNavigator.tsx
-- src/navigation/rootTypes.ts
-- src/navigation/providerLinking.ts
-- src/screens/auth/LoginScreen.tsx (UI retained; delegates login transition to session state)
-- src/screens/provider/ProviderDashboardScreen.tsx
-- src/screens/provider/ProviderProfileScreen.tsx
-- src/screens/provider/WarrantyProviderEntryScreen.tsx
-- src/services/authService.ts (extracts existing profile lookup for reuse during restoration)
-- tests/providerWorkflow.test.mjs
+Create Warranty Request is a dashboard Quick Action beside View All Requests and Notifications. Existing Firestore request/appliance/warranty reads and writes, document confirmations, verification decisions, notifications, status updates, and finalized read-only behavior remain in place. Document review records manual confirmations only; it does not upload files.
 
-Added: src/components/auth/AuthContext.tsx, src/navigation/rootLinking.ts, AUTH_INTEGRATION.md.
+The authenticated UID is passed separately from the optional query filter. New warranty and warranty-request records use the UID as `providerId`; existing queries keep their prior scope, so legacy records are not hidden, migrated, overwritten, or deleted. Firestore rules remain the authority for access. Profile uses shared account details and the shared logout function.
 
-Firebase initialization, Firestore CRUD services, document review, verification, finalized views, request route parameters, and bottom tabs remain in place.
+## Manual verification
 
-## Integration requirements
-- A valid Firebase Auth account needs users/{uid} with role: "provider" (or the existing homeowner/technician roles).
-- Deployed Firestore rules must permit that authenticated account to read its profile and perform its authorized module operations. Navigation guards are not a replacement for Firestore rules; no rules were changed/deployed here.
-- Request-level customer IDs remain until the customer module supplies shared customer identities.
-- The technician module is still unconnected; its authenticated placeholder includes logout. The shared homeowner screen is preserved.
-- Current providerId equality queries and client sorting need no new composite index. Enabling server-side createdAt sorting together with providerId may require the existing optional composite index.
+1. Start the frontend with `npx expo start --clear`; press `w` for web or open Expo Go.
+2. Confirm signed-out startup shows shared role selection, with no create-request action. Select Warranty Provider and log in with a matching Firebase account; invalid credentials and role mismatches must not open provider routes.
+3. Verify the dashboard counts and Quick Actions. Create a valid request and confirm the linked appliance, warranty, and request records in Firestore; warranty/request `providerId` values should match the signed-in UID.
+4. Open the request, edit supported customer/appliance fields, confirm all three document-review items, and continue through warranty verification and status update. Reload and verify persisted values and notification creation.
+5. Open Notifications, mark one and all as read, and use View Request. Approved/rejected requests must open finalized read-only details; pending/more-information requests may continue the workflow.
+6. Check Profile identity and log out. Confirm shared authentication returns and browser back or direct provider URLs do not expose provider screens while signed out.
+7. Log in again and reload to test session restoration. On web, refresh provider routes and use browser back/forward; repeat navigation on Android/iOS.
 
-## Manual test
-1. From frontend run npx expo start --clear. Use Expo Go on Android/iOS or press w for web.
-2. In a signed-out session, shared role selection must appear. Choose Warranty Provider and log in with a real provider account. Wrong credentials or a mismatched selected role must not open the provider dashboard.
-3. Confirm Dashboard counts, recent requests, and all three Quick Actions. Use Create Warranty Request to submit valid details. Confirm success and inspect appliances, warranties, and warrantyRequests in Firestore; the latter two must use the signed-in UID as providerId.
-4. Refresh Requests and reopen the created request. Save details, select all document confirmations, save verification, and confirm a status change. Reload and check persistence and the linked notification.
-5. Open approved/rejected requests from Requests and Notifications; they must remain read-only. Pending/more-information requests retain the editable flow.
-6. On web, navigate tabs and detail URLs, use browser back/forward, and refresh a provider route while signed in.
-7. Open Profile, check identity, and log out. Browser back/direct provider URLs must not reveal provider data while signed out. Log in again and confirm Dashboard opens. Restart while signed in to check restoration.
-
-Automated tests use mocked services; they do not create live records or establish successful real-account login.
-
-## Validation completed
-- npm run typecheck: passed.
-- npm run test:provider: 22 tests passed, including shared profile/role validation and root linking scope.
-- npx expo install --check: dependencies up to date.
-- npx expo export --platform all --output-dir dist --no-bytecode --max-workers 1: web, Android and iOS JavaScript exports passed. This does not constitute a device runtime test or native binary build.
-- One top-level NavigationContainer, one auth listener and one Firebase initialization confirmed by source audit.
-- Live sign-in, logout and Firestore writes still require the manual test above with a real account; none were performed in this integration task.
+Automated tests use mocked Firebase services. They do not establish live authentication or Firestore success; those require the manual checks above with a real account. Customer IDs remain request-scoped until a shared customer identity is integrated.
